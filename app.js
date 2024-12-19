@@ -1,10 +1,10 @@
-const express = require("express")
-const cors = require("cors")
-const dotenv = require("dotenv")
-const router = require("./src/modules/v1/routes/index.js")
-const pageNotFound = require("./src/middlewares/page-not-foud.middleware.js")
-const { errorHandler } = require("./src/middlewares/error.middleware.js");       
-const connectDb = require("./src/utils/db/index.js")
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import routes from "./src/modules/v1/routes/index.js";
+import { errorMiddleware } from "./src/middlewares/error.middleware.js";
+import { pageNotFound } from "./src/middlewares/middle.wares.js";
+import connectDb from "./src/utils/db/index.js";
 
 dotenv.config();
 
@@ -27,12 +27,12 @@ app.use(express.urlencoded({ extended: false }));
 app.get("/", (req, res) => {
   res.send("<h1>This server is healthy🎉🎊</h1>");
 });
-app.use(router);
+app.use(routes);
 
-// connectDb();
+connectDb();
 
 app.use(pageNotFound);
-app.use(errorHandler);
+app.use(errorMiddleware.handle);
 
 app.listen(port, () => {
   console.log(`server running on port ${port}`);

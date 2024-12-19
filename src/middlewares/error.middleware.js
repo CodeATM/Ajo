@@ -1,100 +1,95 @@
-import { JsonWebTokenError } from "jsonwebtoken";
-import { errorResponse } from "../utils/apiResponse";
+import Jwt from "jsonwebtoken";
+import { errorResponse } from "../utils/response.js";
 import { MongoServerError } from "mongodb";
 import Joi from "joi";
 
-// Bad Request error
-class BadRequestError extends Error {
-  constructor(message) {
+// Base error class
+class AppError extends Error {
+  constructor(message, status) {
     super(message);
-    this.name = "BadRequestError";
-    this.status = 400;
+    this.status = status;
+    this.name = this.constructor.name;
   }
 }
 
-// Unauthorized error
-class UnauthorizedError extends Error {
+// Specific error classes
+class BadRequestError extends AppError {
   constructor(message) {
-    super(message);
-    this.name = "UnauthorizedError";
-    this.status = 401;
+    super(message, 400);
   }
 }
 
-// Forbidden error
-class ForbiddenError extends Error {
+class UnauthorizedError extends AppError {
   constructor(message) {
-    super(message);
-    this.name = "ForbiddenError";
-    this.status = 403;
+    super(message, 401);
   }
 }
 
-// Not found error
-class NotFoundError extends Error {
+class ForbiddenError extends AppError {
   constructor(message) {
-    super(message);
-    this.name = "NotFoundError";
-    this.status = 404;
+    super(message, 403);
   }
 }
 
-// Internal server error
-class InternalServerError extends Error {
+class NotFoundError extends AppError {
   constructor(message) {
-    super(message);
-    this.name = "InternalServerError";
-    this.status = 500;
+    super(message, 404);
   }
 }
 
-export const errorHandler = (error, req, res, next) => {
-  if (error instanceof JsonWebTokenError) {
-    return errorResponse(res, 403, "Invalid token.");
+class InternalServerError extends AppError {
+  constructor(message) {
+    super(message, 500);
   }
+}
 
-  // MongoDB specific error handling
-  if (error instanceof MongoServerError) {
-    // Duplicate key error
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyPattern)[0];
-      return errorResponse(res, 400, `${field} already exists.`);
+// Error middleware
+class errorMiddleware {
+  static handle(error, req, res, next) {
+    const JsonWebTokenError = Jwt.JsonWebTokenError;
+    if (error instanceof JsonWebTokenError) {
+      return errorResponse(res, 403, "Invalid token.");
     }
 
-    // No documents matched the query criteria
-    if (error.code === 209) {
-      return errorResponse(res, 404, "Record not found.");
+    // Handle MongoDB-specific errors
+    if (error instanceof MongoServerError) {
+      switch (error.code) {
+        case 11000: {
+          const field = Object.keys(error.keyPattern)[0];
+          return errorResponse(res, 400, `${field} already exists.`);
+        }
+        case 121:
+          return errorResponse(res, 400, "Document validation failed.");
+        default:
+          return errorResponse(res, 500, "Database error occurred.");
+      }
     }
 
-    // Invalid ObjectId
-    if (error.code === 51024) {
-      return errorResponse(res, 400, "Invalid ID format.");
+    // Handle Joi validation errors
+    if (error instanceof Joi.ValidationError) {
+      const errorDetails = error.details.reduce((acc, detail) => {
+        acc[detail.path.join(".")] = detail.message;
+        return acc;
+      }, {});
+      return errorResponse(res, 400, "Validation Error", errorDetails);
     }
+
+    // Handle application-specific errors
+    if (error instanceof AppError) {
+      return errorResponse(res, error.status, error.message);
+    }
+
+    // Handle unexpected errors without crashing the app
+    console.error("Unexpected error:", error);
+    return errorResponse(res, 500, "An unexpected error occurred.");
   }
+}
 
-  // Joi validation error
-  if (error instanceof Joi.ValidationError) {
-    const errorDetail = error.details.reduce((key, value) => {
-      key[value.path.join(".")] = `${value.message}.`;
-      return key;
-    }, {});
-    return errorResponse(res, 400, "Validation Error", errorDetail);
-  }
-
-  // Handle custom errors
-  if (error.status) {
-    return errorResponse(res, error.status, error.message);
-  }
-
-  // Handle unexpected errors
-  console.error("Unexpected error:", error);
-  return errorResponse(res, 500, "An unexpected error occurred.");
-};
-
-module.exports = {
+export {
   BadRequestError,
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   InternalServerError,
+  errorMiddleware,
 };

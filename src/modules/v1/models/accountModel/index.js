@@ -1,11 +1,8 @@
 import mongoose from "mongoose";
+import validator from "validator";
 
 const accountSchema = new mongoose.Schema({
-  surname: {
-    type: String,
-    required: true,
-  },
-  middlename: {
+  firstname: {
     type: String,
     required: true,
   },
@@ -13,6 +10,19 @@ const accountSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  dateOfBirth: {
+    type: String,
+  },
+  accountNumber: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  user: {
+    unique: true,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
 });
 
-export default accountSchema;
+export default mongoose.model("Account", accountSchema);

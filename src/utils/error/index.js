@@ -1,58 +1,37 @@
-class SystemError extends Error {
-  constructor(code, message = "Sorry, something went wrong!", errors) {
+export class ApplicationError extends Error {
+  constructor(code = 500, message = "Something went wrong", errors) {
     super(message);
-    this._code = code || 500;
-    this._errors = errors;
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-
-  get code() {
-    return this._code;
-  }
-
-  get errors() {
-    return this._errors;
+    this.code = code;
+    this.errors = errors;
   }
 }
 
-class ApplicationError extends SystemError {
-  constructor(code, message, errors) {
-    super(code, message, errors);
-    Object.setPrototypeOf(this, new.target.prototype);
+export class NotFoundError extends ApplicationError {
+  constructor(message = "Resource not found.") {
+    super(404, message);
   }
 }
 
-class NotFoundError extends SystemError {
-  constructor(message) {
-    super(404, message || "Resource not found.");
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-}
-
-class ConflictError extends SystemError {
-  constructor(message) {
+export class ConflictError extends ApplicationError {
+  constructor(message = "Conflict occurred.") {
     super(409, message);
-    Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
-class UnauthorizedError extends SystemError {
-  constructor(message) {
-    super(401, message || "You are not authorized to access this resource.");
-    Object.setPrototypeOf(this, new.target.prototype);
+export class UnauthorizedError extends ApplicationError {
+  constructor(message = "You are not authorized to access this resource.") {
+    super(401, message);
   }
 }
 
-class BadRequestError extends SystemError {
-  constructor(message) {
-    super(400, message || "Bad Request!");
-    Object.setPrototypeOf(this, new.target.prototype);
+export class BadRequestError extends ApplicationError {
+  constructor(message = "Bad Request!") {
+    super(400, message);
   }
 }
 
-class ForbiddenError extends SystemError {
-  constructor(message) {
-    super(403, message || "Access Denied!");
-    Object.setPrototypeOf(this, new.target.prototype);
+export class ForbiddenError extends ApplicationError {
+  constructor(message = "Access Denied!") {
+    super(403, message);
   }
 }

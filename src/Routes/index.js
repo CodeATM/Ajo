@@ -1,28 +1,30 @@
-const express = require("express");
-const Router = express.Router();
-const apiResponse = require("../utils/apiResponse/index");
+import { Router } from "express";
+import { successResponse } from "../utils/response.js";
+import { NotFoundError } from "../middlewares/error.middleware.js";
+import V1Routes from "../Routes/index.js";
 
 class Routes {
   constructor() {
-    let router;
     this.router = Router();
     this.routes();
   }
 
   routes() {
-    this.router.get("/", (req, res, next) => {
+    this.router.get("/", (req, res) => {
       const data = {
         owner: "CyberATM",
         developer: "Oluwatimileyin Matthew",
       };
 
-      return apiResponse.successResponse(res, 200, "CyberAtm", data);
+      return successResponse(res, 200, "CyberAtm", data);
     });
 
-    this.router.use(`${process.env.V1_URL}`, )
+    this.router.use(`${process.env.V1_URL}`, V1Routes);
 
-    this.router.use("*", () => {
-        throw New 
-    })
+    this.router.use("*", (req, res, next) => {
+      next(new NotFoundError("API endpoint not found or in construction"));
+    });
   }
 }
+
+export default new Routes().router;
