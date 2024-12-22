@@ -2,6 +2,7 @@ import { Router } from "express";
 import { successResponse } from "../../../utils/response.js";
 import { NotFoundError } from "../../../utils/error/index.js";
 import authRoutes from "./authRoutes.js";
+import userRoutes from "./userRoutes.js";
 
 class Routes {
   constructor() {
@@ -34,6 +35,7 @@ class Routes {
   initializeV1Routes(router) {
     // Add specific V1 routes here
     router.use("/auth", authRoutes);
+    router.use("/user", userRoutes);
 
     // Handle 404 for undefined routes in V1
     router.use("*", (req, res, next) => {

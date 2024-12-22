@@ -3,7 +3,7 @@ export const successResponse = (
   statusCode,
   message,
   data,
-  error = null
+  error = false
 ) => {
   if (statusCode < 200 || statusCode > 299) {
     throw new Error("Invalid status code. Use a valid status code");

@@ -1,8 +1,12 @@
 import { BadRequestError } from "../../../middlewares/error.middleware.js";
 import { createAccount } from "../../../services/accountService/index.js";
 import {
+  changePasswordService,
+  loginService,
   registerService,
+  requestOTP,
   verifyTokenFunc,
+  verifyUserService,
 } from "../../../services/AuthService/index.js";
 import { create, UserExist } from "../../../services/userService/index.js";
 import { successResponse } from "../../../utils/response.js";
@@ -35,40 +39,60 @@ export const activateAccount = async (req, res, next) => {
       throw new BadRequestError("Activation Token missing.");
     }
 
-    const userIdentity = await verifyTokenFunc(token);
-    console.log(userIdentity);
-    const userExists = await UserExist(userIdentity.email);
-
-    if (userExists) {
-      throw new BadRequestError("User already verified.");
-    }
-    delete userIdentity["iat"];
-    delete userIdentity["exp"];
-    console.log(userIdentity);
-
-    const newUser = await create({
-      email: userIdentity.email,
-      password: userIdentity.password,
-      phonenumber: userIdentity.phonenumber,
-    });
-    console.log(newUser);
-    const createAcc = await createAccount({
-      firstname: userIdentity.firstname,
-      lastname: userIdentity.lastname,
-      user: newUser._id,
-    });
-    console.log(createAcc)
+    const data = await verifyUserService(token);
+    return successResponse(res, 200, "Verification Successful", data);
   } catch (error) {
     console.log(error);
     next(error);
   }
-};  
+};
 
-// login
-// logout
-// activate user account
+export const loginUser = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      throw new BadRequestError("Email and password are required for login.");
+    }
+    const data = await loginService({ email, password });
+
+    await successResponse(res, 200, "User login successful", data);
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
+
+export const changePassword = async (req, res, next) => {
+  try {
+    const { userId, newPassword, oldPassword } = req.body;
+
+    const data = await changePasswordService({
+      userId,
+      oldPassword,
+      newPassword,
+    });
+
+    await successResponse(res, 200, "Password change successfully", data);
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
+
+export const getOtp = async (req, res, next) => {
+  const { email } = req.body;
+
+  await requestOTP({ email });
+
+  await successResponse(res, 200, "^ didgit otp sent successfully");
+};
+
+// login **
+// logout **
+// activate user account **
 //forget password
 // refresh token
-// change password
+// change password **
 // request otp
 // reset Password
