@@ -3,6 +3,8 @@ import { successResponse } from "../../../utils/response.js";
 import { NotFoundError } from "../../../utils/error/index.js";
 import authRoutes from "./authRoutes.js";
 import userRoutes from "./userRoutes.js";
+import planRoutes from "./planRoutes.js";
+import subscriptionRoutes from "./subscriptionRoutes.js";
 
 class Routes {
   constructor() {
@@ -36,6 +38,8 @@ class Routes {
     // Add specific V1 routes here
     router.use("/auth", authRoutes);
     router.use("/user", userRoutes);
+    router.use("/plan", planRoutes);
+    router.use("/subscribe", subscriptionRoutes);
 
     // Handle 404 for undefined routes in V1
     router.use("*", (req, res, next) => {

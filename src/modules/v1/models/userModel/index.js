@@ -23,6 +23,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    account: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Account",
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -40,8 +44,8 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
     nextOfKin: {
-      name: { type: String, },
-      relationship: { type: String, },
+      name: { type: String },
+      relationship: { type: String },
       phone: {
         type: String,
         validate: [validator.isMobilePhone, "Invalid phone number format"],

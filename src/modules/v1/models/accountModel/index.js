@@ -15,12 +15,6 @@ const accountSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-    unique: true,
-  },
   accountType: {
     type: String,
     enum: ["Savings", "Current"],
@@ -30,10 +24,6 @@ const accountSchema = new mongoose.Schema({
     type: String,
     enum: ["Active", "Dormant", "Closed"],
     default: "Active",
-  },
-  balance: {
-    type: Number,
-    default: 0.0,
   },
   createdAt: {
     type: Date,

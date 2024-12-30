@@ -43,7 +43,6 @@ export const getOneUser = async (id) => {
 
 export const deleteOneUser = async (id) => {
   const user = await User.findByIdAndDelete(id);
-
   return {
     user,
   };

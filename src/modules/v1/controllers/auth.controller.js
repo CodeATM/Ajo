@@ -87,12 +87,3 @@ export const getOtp = async (req, res, next) => {
 
   await successResponse(res, 200, "^ didgit otp sent successfully");
 };
-
-// login **
-// logout **
-// activate user account **
-//forget password
-// refresh token
-// change password **
-// request otp
-// reset Password

@@ -9,6 +9,7 @@ import Jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { createAccount } from "../accountService/index.js";
 import { create, UserExist } from "../userService/index.js";
+import { createNotification } from "../notificationService/index.js";
 
 // register
 export const registerService = async (registerData) => {
@@ -43,7 +44,6 @@ export const registerService = async (registerData) => {
 
 export const verifyUserService = async (token) => {
   const userIdentity = await verifyTokenFunc(token);
-  console.log(userIdentity);
   const userExists = await UserExist(userIdentity.email);
 
   if (userExists) {
@@ -51,17 +51,19 @@ export const verifyUserService = async (token) => {
   }
   delete userIdentity["iat"];
   delete userIdentity["exp"];
-  console.log(userIdentity);
+
+  const createAcc = await createAccount({
+    firstname: userIdentity.firstname,
+    lastname: userIdentity.lastname,
+  });
+
+  console.log(createAcc.id)
 
   const newUser = await create({
     email: userIdentity.email,
     password: userIdentity.password,
     phonenumber: userIdentity.phonenumber,
-  });
-  const createAcc = await createAccount({
-    firstname: userIdentity.firstname,
-    lastname: userIdentity.lastname,
-    user: newUser._id,
+    account: createAcc.id,
   });
 
   const userId = newUser.id;
@@ -73,6 +75,14 @@ export const verifyUserService = async (token) => {
   const refreshToken = await createJwtTokenFunc({
     UserIdentity: { userId },
     expiresIn: process.env.VERIFICATION_REFRESH_TOKEN_EXP,
+  });
+
+  await createNotification({
+    notificationType: "WELCOME TO AJO",
+    recieverId: userId,
+    message: `Hello ${createAcc.firstname}, welcome to ajo the one place for all savings and finacial related issues`,
+    notificationCategory: "user",
+    associatedLink: "",
   });
   return { accessToken, refreshToken, userId };
 };
