@@ -59,7 +59,6 @@ export const cancelPlan = async (req, res, next) => {
 
 export const getAllPlans = async (req, res, next) => {
   try {
-    await flwActivateSubscription(71317);
     const data = await getPlanService();
     await successResponse(res, 200, "Plans fetched successfully.", data);
   } catch (error) {

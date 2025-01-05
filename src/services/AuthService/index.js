@@ -57,8 +57,6 @@ export const verifyUserService = async (token) => {
     lastname: userIdentity.lastname,
   });
 
-  console.log(createAcc.id)
-
   const newUser = await create({
     email: userIdentity.email,
     password: userIdentity.password,
@@ -116,7 +114,7 @@ export const changePasswordService = async ({
   oldPassword,
   newPassword,
 }) => {
-  const user = await User.findById(userId);
+  const user = await User.findById(userId).populate("account");
   if (!user) {
     throw new NotFoundError("User with this id not found.");
   }
@@ -134,10 +132,32 @@ export const changePasswordService = async ({
   await User.findByIdAndUpdate(userId, {
     password: hashpassword,
   });
+
+  await createNotification({
+    notificationType: "WELCOME TO AJO",
+    recieverId: userId,
+    message: `Hello ${user.account.firstname}, Your password has ben successfully updated. Please make sure to keep it safe from unauthorized parties for maximum security.`,
+    notificationCategory: "user",
+    associatedLink: "",
+  });
 };
 
-export const requestOTP = ({ email }) => {
-  // create the OTP
+export const requestOTP = async ({ email }) => {
+  const user = await User.findOne({ email: email });
+
+  if (!user) {
+    throw new NotFoundError("User with this email not found.");
+  }
+
+  const optCode = await this.generateOTP();
+  // write a function to send mail to the user
+  // concertnate the userId andf the otp code
+  // save in he redis cache store
+};
+
+export const resetPassword = async ({ password, otp }) => {
+  // validate otp from redis
+
 };
 
 const hashpasswordFunc = async (password) => {

@@ -1,5 +1,5 @@
 import { BadRequestError } from "../../middlewares/error.middleware.js";
-import  Account from "../../modules/v1/models/accountModel/index.js";
+import Account from "../../modules/v1/models/accountModel/index.js";
 
 const generateUniqueAccountNumberFunc = () => {
   const prefix = "133";
@@ -14,26 +14,24 @@ const isAccountNumUniqueFunc = async (accountNum) => {
   return !!account;
 };
 
-export const createAccount = async ({ firstname, lastname, user }) => {
-  let accountNum;
-  let isUnique = false;
-
-  // Keep generating until a unique account number is found
-  while (!isUnique) {
-    accountNum = generateUniqueAccountNumberFunc();
-    isUnique = !(await isAccountNumUniqueFunc(accountNum));
-  }
-
-  // Create the account
-  const newAccount = new Account({
-    firstname,
-    lastname,
-    user,
-    accountNumber: accountNum,
-  });
-
+export const createAccount = async ({ firstname, lastname }) => {
   try {
-    await newAccount.save();
+    let accountNum;
+    let isUnique = false;
+
+    // Keep generating until a unique account number is found
+    while (!isUnique) {
+      accountNum = generateUniqueAccountNumberFunc();
+      isUnique = !(await isAccountNumUniqueFunc(accountNum));
+    }
+
+    // Create the account
+    const newAccount = await Account.create({
+      firstname,
+      lastname,
+      accountNumber: accountNum,
+    });
+
     return newAccount;
   } catch (error) {
     throw new BadRequestError("Failed to create account.");

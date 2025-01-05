@@ -44,12 +44,13 @@ export const flwCancelPlan = async (planId) => {
 };
 
 export const flwActivateSubscription = async ({
-  planId,
+  fluId,
   userData,
   trx_ref,
 }) => {
   try {
-    const planDetailsUrl = `https://api.flutterwave.com/v3/payment-plans/${planId}`;
+    console.log(fluId)
+    const planDetailsUrl = `https://api.flutterwave.com/v3/payment-plans/${fluId}`;
 
     const planDetailsResponse = await axios.get(planDetailsUrl, {
       headers: {
@@ -70,7 +71,7 @@ export const flwActivateSubscription = async ({
       amount,
       currency,
       redirect_url: "https://yourwebsite.com/payment-completed",
-      payment_plan: planId,
+      payment_plan: fluId,
       customer: {
         email: userData.email,
         phonenumber: userData.phonenumber,

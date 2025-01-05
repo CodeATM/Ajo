@@ -8,11 +8,13 @@ export const UserExistById = async (id) => {
   return await User.findById(id);
 };
 
-export const create = async ({ email, password, phonenumber }) => {
+export const create = async ({ email, password, phonenumber, account }) => {
+  console.log({ email, password, phonenumber, account });
   const data = await User.create({
     email,
     password,
     phonenumber,
+    account,
     isVerified: true,
   });
   return data;

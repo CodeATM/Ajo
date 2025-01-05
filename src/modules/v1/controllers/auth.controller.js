@@ -81,9 +81,33 @@ export const changePassword = async (req, res, next) => {
 };
 
 export const getOtp = async (req, res, next) => {
-  const { email } = req.body;
+  try {
+    const { email } = req.body;
+    if (!email) {
+      throw new BadRequestError("Input your email to ge verification code.");
+    }
 
-  await requestOTP({ email });
+    await requestOTP({ email });
 
-  await successResponse(res, 200, "^ didgit otp sent successfully");
+    await successResponse(res, 200, "6 digit otp sent to mail successfully");
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { password, otp } = req.body;
+
+    if (!password) throw new BadRequestError("Password space cannot be empty.");
+    if (!otp) throw new BadRequestError("Otp space cannot be empty.");
+
+    const data = await resetPassword({ password, otp });
+    await successResponse(res, 200, "Password changed successfully.", data);
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
 };

@@ -11,6 +11,7 @@ import {
   ForbiddenError,
   BadRequestError,
 } from "../../middlewares/error.middleware.js";
+import { createNotification } from "../notificationService/index.js";
 
 export const createPlanService = async ({
   duration,
@@ -21,25 +22,63 @@ export const createPlanService = async ({
   description,
   userId,
 }) => {
+  // Validate required parameters
+  if (
+    !duration ||
+    !amount ||
+    !interval ||
+    !name ||
+    !planType ||
+    !description ||
+    !userId
+  ) {
+    throw new BadRequestError("Make sure your parameters are complete.");
+  }
+
   // Create a plan on Flutterwave
   const plan = await flwCreatePlan({ duration, amount, interval, name });
 
+  if (!plan) {
+    throw new Error("Failed to create a plan on Flutterwave.");
+  }
+
+  // Check if user exists
   const user = await UserExistById(userId);
   if (!user) {
     throw new NotFoundError("User with this ID not found.");
   }
-  const code = await referalCodeFunc();
+
+  // Generate a referral code
+  const { expireTime, referalCode } = await referalCodeFunc({ interval });
+  const planExpireDate = await setPlanExpireDate(interval);
+
+  // Create the new plan in the database
   const newPlan = await Plan.create({
     plan_name: plan.name,
     plan_type: planType,
     flu_planid: plan.id,
-    referalCode: code,
+    referalCode: referalCode,
+    referralCodeExpires: expireTime,
     description: description,
     amount: plan.amount,
     plan_span: plan.duration,
     plan_interval: plan.interval,
     plan_token: plan.plan_token,
     plan_admin: userId,
+    plan_EndDate: planExpireDate,
+  });
+
+  // Create a notification for the user
+  await createNotification({
+    notificationType: "PLAN CREATED SUCCESSFULLY",
+    recieverId: newPlan.plan_admin,
+    message: `Hello ${user.firstname}, you have successfully created a plan. ${
+      planType === "individual"
+        ? "Make your first payment to activate this plan."
+        : ""
+    } We look forward to helping you achieve your savings goals in the future.`,
+    notificationCategory: "user",
+    associatedLink: "",
   });
 
   return newPlan;
@@ -117,6 +156,129 @@ const planValidations = async ({ planId, user }) => {
   return plan;
 };
 
-const referalCodeFunc = async () => {
-  return crypto.randomInt(100000, 999999);
+const referalCodeFunc = async (interval) => {
+  const referralCode = crypto.randomInt(100000, 999999);
+  let expireTime;
+  const currentDate = new Date();
+
+  if (interval === "Monthly") {
+    expireTime = new Date(
+      Date.UTC(
+        currentDate.getUTCFullYear(),
+        currentDate.getUTCMonth() + 1,
+        currentDate.getUTCDate(),
+        0,
+        0,
+        0
+      )
+    );
+  } else if (interval === "Weekly") {
+    expireTime = new Date(
+      Date.UTC(
+        currentDate.getUTCFullYear(),
+        currentDate.getUTCMonth(),
+        currentDate.getUTCDate() + 7,
+        0,
+        0,
+        0
+      )
+    );
+  } else if (interval === "Biannual") {
+    expireTime = new Date(
+      Date.UTC(
+        currentDate.getUTCFullYear(),
+        currentDate.getUTCMonth() + 6,
+        currentDate.getUTCDate(),
+        0,
+        0,
+        0
+      )
+    );
+  } else {
+    throw new Error("Invalid interval type provided.");
+  }
+
+  return { referralCode, expireTime };
+};
+
+const setPlanExpireDate = (currentExpireDate, interval, userCount) => {
+  let expireDate = currentExpireDate ? new Date(currentExpireDate) : new Date();
+
+  if (userCount === 0) {
+    if (interval === "Monthly") {
+      expireDate = new Date(
+        Date.UTC(
+          expireDate.getUTCFullYear(),
+          expireDate.getUTCMonth() + 1,
+          expireDate.getUTCDate(),
+          0,
+          0,
+          0
+        )
+      );
+    } else if (interval === "Weekly") {
+      expireDate = new Date(
+        Date.UTC(
+          expireDate.getUTCFullYear(),
+          expireDate.getUTCMonth(),
+          expireDate.getUTCDate() + 7,
+          0,
+          0,
+          0
+        )
+      );
+    } else if (interval === "Biannual") {
+      expireDate = new Date(
+        Date.UTC(
+          expireDate.getUTCFullYear(),
+          expireDate.getUTCMonth() + 6,
+          expireDate.getUTCDate(),
+          0,
+          0,
+          0
+        )
+      );
+    } else {
+      throw new Error("Invalid interval type provided.");
+    }
+  } else {
+    if (interval === "Monthly") {
+      expireDate = new Date(
+        Date.UTC(
+          expireDate.getUTCFullYear(),
+          expireDate.getUTCMonth() + userCount,
+          expireDate.getUTCDate(),
+          0,
+          0,
+          0
+        )
+      );
+    } else if (interval === "Weekly") {
+      expireDate = new Date(
+        Date.UTC(
+          expireDate.getUTCFullYear(),
+          expireDate.getUTCMonth(),
+          expireDate.getUTCDate() + userCount * 7,
+          0,
+          0,
+          0
+        )
+      );
+    } else if (interval === "Biannual") {
+      expireDate = new Date(
+        Date.UTC(
+          expireDate.getUTCFullYear(),
+          expireDate.getUTCMonth() + userCount * 6,
+          expireDate.getUTCDate(),
+          0,
+          0,
+          0
+        )
+      );
+    } else {
+      throw new Error("Invalid interval type provided.");
+    }
+  }
+
+  return expireDate;
 };

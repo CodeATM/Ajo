@@ -21,6 +21,9 @@ const planSchema = new mongoose.Schema(
       type: String,
       unique: true,
     },
+    referralCodeExpires: {
+      type: Date,
+    },
     description: {
       type: String,
     },
