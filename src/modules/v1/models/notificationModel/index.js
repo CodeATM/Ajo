@@ -13,7 +13,7 @@ const notificiationtSchema = new mongoose.Schema(
         "PASSWORD UPDATE SUCCESFUL",
         "TRANSACTION FAILED",
         "USER JOINED A PLAN",
-        "PLAN CREATED SUCCESSFUL",
+        "PLAN CREATED SUCCESSFULLY",
         "SECURITY UPDATE",
       ],
     },

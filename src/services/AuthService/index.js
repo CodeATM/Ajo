@@ -55,6 +55,8 @@ export const verifyUserService = async (token) => {
   const createAcc = await createAccount({
     firstname: userIdentity.firstname,
     lastname: userIdentity.lastname,
+    phonenumber: userIdentity.phonenumber,
+    email: userIdentity.email,
   });
 
   const newUser = await create({

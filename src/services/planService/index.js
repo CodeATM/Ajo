@@ -12,6 +12,7 @@ import {
   BadRequestError,
 } from "../../middlewares/error.middleware.js";
 import { createNotification } from "../notificationService/index.js";
+import { paystackCreatePlan } from "../../utils/Paystack.js";
 
 export const createPlanService = async ({
   duration,
@@ -36,7 +37,12 @@ export const createPlanService = async ({
   }
 
   // Create a plan on Flutterwave
-  const plan = await flwCreatePlan({ duration, amount, interval, name });
+  const plan = await paystackCreatePlan({
+    name,
+    interval,
+    amount,
+    description,
+  });
 
   if (!plan) {
     throw new Error("Failed to create a plan on Flutterwave.");
@@ -49,21 +55,23 @@ export const createPlanService = async ({
   }
 
   // Generate a referral code
-  const { expireTime, referalCode } = await referalCodeFunc({ interval });
-  const planExpireDate = await setPlanExpireDate(interval);
+  const { expireTime, referralCode } = await referalCodeFunc(interval);
+  const planExpireDate = await setPlanExpireDate({
+    currentExpireDate: null,
+    interval: interval,
+    userCount: 0,
+  });
 
   // Create the new plan in the database
   const newPlan = await Plan.create({
     plan_name: plan.name,
     plan_type: planType,
-    flu_planid: plan.id,
-    referalCode: referalCode,
+    pay_planid: plan.plan_code,
+    referalCode: referralCode,
     referralCodeExpires: expireTime,
     description: description,
-    amount: plan.amount,
-    plan_span: plan.duration,
+    amount: amount,
     plan_interval: plan.interval,
-    plan_token: plan.plan_token,
     plan_admin: userId,
     plan_EndDate: planExpireDate,
   });
@@ -157,11 +165,24 @@ const planValidations = async ({ planId, user }) => {
 };
 
 const referalCodeFunc = async (interval) => {
-  const referralCode = crypto.randomInt(100000, 999999);
-  let expireTime;
-  const currentDate = new Date();
+  let referralCode;
+  let isDuplicate = true;
 
-  if (interval === "Monthly") {
+  // Loop until a unique referral code is generated
+  while (isDuplicate) {
+    referralCode = crypto.randomInt(100000, 999999);
+
+    // Query the database to check if the code already exists
+    const existingCode = await Plan.findOne({ referalCode: referralCode });
+    if (!existingCode) {
+      isDuplicate = false; // Code is unique
+    }
+  }
+
+  const currentDate = new Date();
+  let expireTime;
+
+  if (interval === "monthly") {
     expireTime = new Date(
       Date.UTC(
         currentDate.getUTCFullYear(),
@@ -172,7 +193,7 @@ const referalCodeFunc = async (interval) => {
         0
       )
     );
-  } else if (interval === "Weekly") {
+  } else if (interval === "weekly") {
     expireTime = new Date(
       Date.UTC(
         currentDate.getUTCFullYear(),
@@ -183,7 +204,7 @@ const referalCodeFunc = async (interval) => {
         0
       )
     );
-  } else if (interval === "Biannual") {
+  } else if (interval === "biannual") {
     expireTime = new Date(
       Date.UTC(
         currentDate.getUTCFullYear(),
@@ -194,18 +215,21 @@ const referalCodeFunc = async (interval) => {
         0
       )
     );
-  } else {
-    throw new Error("Invalid interval type provided.");
   }
 
   return { referralCode, expireTime };
 };
-
-const setPlanExpireDate = (currentExpireDate, interval, userCount) => {
-  let expireDate = currentExpireDate ? new Date(currentExpireDate) : new Date();
+const setPlanExpireDate = async ({
+  currentExpireDate,
+  interval,
+  userCount,
+}) => {
+  let expireDate = (await currentExpireDate)
+    ? new Date(currentExpireDate)
+    : new Date();
 
   if (userCount === 0) {
-    if (interval === "Monthly") {
+    if (interval == "monthly") {
       expireDate = new Date(
         Date.UTC(
           expireDate.getUTCFullYear(),
@@ -216,7 +240,7 @@ const setPlanExpireDate = (currentExpireDate, interval, userCount) => {
           0
         )
       );
-    } else if (interval === "Weekly") {
+    } else if (interval == "weekly") {
       expireDate = new Date(
         Date.UTC(
           expireDate.getUTCFullYear(),
@@ -227,7 +251,7 @@ const setPlanExpireDate = (currentExpireDate, interval, userCount) => {
           0
         )
       );
-    } else if (interval === "Biannual") {
+    } else if (interval == "biannual") {
       expireDate = new Date(
         Date.UTC(
           expireDate.getUTCFullYear(),
@@ -242,7 +266,7 @@ const setPlanExpireDate = (currentExpireDate, interval, userCount) => {
       throw new Error("Invalid interval type provided.");
     }
   } else {
-    if (interval === "Monthly") {
+    if (interval == "monthly") {
       expireDate = new Date(
         Date.UTC(
           expireDate.getUTCFullYear(),
@@ -253,7 +277,7 @@ const setPlanExpireDate = (currentExpireDate, interval, userCount) => {
           0
         )
       );
-    } else if (interval === "Weekly") {
+    } else if (interval == "weekly") {
       expireDate = new Date(
         Date.UTC(
           expireDate.getUTCFullYear(),
@@ -264,7 +288,7 @@ const setPlanExpireDate = (currentExpireDate, interval, userCount) => {
           0
         )
       );
-    } else if (interval === "Biannual") {
+    } else if (interval == "biannual") {
       expireDate = new Date(
         Date.UTC(
           expireDate.getUTCFullYear(),

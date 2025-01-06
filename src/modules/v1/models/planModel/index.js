@@ -12,7 +12,7 @@ const planSchema = new mongoose.Schema(
       required: [true, "You have to specify a plan type"],
       enum: ["individual", "group"],
     },
-    flu_planid: {
+    pay_planid: {
       type: String,
       unique: true,
       required: true,
@@ -46,10 +46,6 @@ const planSchema = new mongoose.Schema(
     plan_EndDate: {
       type: Date,
     },
-    plan_span: {
-      type: String,
-      required: true,
-    },
     plan_interval: {
       type: String,
       required: true,
@@ -66,11 +62,6 @@ const planSchema = new mongoose.Schema(
     isPlanActive: {
       type: Boolean,
       default: true,
-    },
-    plan_token: {
-      type: String,
-      required: true,
-      unique: true,
     },
     // notification: {
     //   type: mongoose.Schema.Types.ObjectId,

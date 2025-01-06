@@ -6,6 +6,7 @@ import {
   BadRequestError,
   NotFoundError,
 } from "../../middlewares/error.middleware.js";
+import { SubscribeUserToPlan } from "../../utils/Paystack.js";
 
 const verifyReferralCode = async (refCode) => {
   const planExist = await Plan.findOne({ referalCode: refCode });
@@ -26,23 +27,22 @@ export const subscribUserService = async ({ planId, userId, refCode }) => {
     throw new NotFoundError("Plan not found");
   }
   const trx_ref = await generateTransactionRefFunc(plan);
-  const userData = {
-    email: user.email,
-    phonenumber: user.phonenumber,
-    firstname: user.account.firstname,
-    lastname: user.account.lastname,
-  };
 
   const fluId = plan.flu_planid;
 
-  const data = await flwActivateSubscription({ fluId, userData, trx_ref });
+  const data = await SubscribeUserToPlan({
+    planCode: plan.pay_planid,
+    customerId: user.account.customerCode,
+    email: user.email,
+    amount: plan.amount
+  });
 
-  return data;
+  return data
 };
 
 const generateTransactionRefFunc = async (plan) => {
   const date = Date.now();
-  const plan_id = plan.flu_planid;
+  const plan_id = plan.pay_planid;
   const randomSuffix = Math.floor(Math.random() * 1000)
     .toString()
     .padStart(3, "0");
