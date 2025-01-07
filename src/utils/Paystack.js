@@ -51,17 +51,17 @@ export const createCustomer = async (customerData) => {
 };
 
 export const SubscribeUserToPlan = async ({
+  email,
   customerId,
   planCode,
   amount,
-  email,
 }) => {
   try {
     const paymentData = {
       email: email,
       plan: planCode,
-      amount: amount * 100,
-      payment_method: "card",
+      amount: amount * 100, // Ensure amount is in kobo (100 kobo = 1 naira)
+      payment_method: "card", // You can adjust this if you're allowing other payment methods
     };
 
     const response = await axios.post(
@@ -75,14 +75,32 @@ export const SubscribeUserToPlan = async ({
       }
     );
 
-    // Log and return the response data (payment details)
-    console.log("Payment Initialization Response:", response.data);
-    return response.data.data; // Return the payment initialization response
+    // // Log and return the response data (payment details)
+    // console.log("Payment Initialization Response:", response.data);
+    return response.data.data;
   } catch (error) {
     console.error(
       "Error initializing payment:",
       error.response?.data || error.message
     );
     throw error;
+  }
+};
+
+export const verifyTransaction = async (reference) => {
+  const VERIFY_TRANSACTION_URL = "https://api.paystack.co/transaction/verify/";
+  try {
+    const response = await axios.get(`${VERIFY_TRANSACTION_URL}${reference}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`,
+      },
+    });
+
+    const data = response.data.data;
+
+    return data;
+  } catch (error) {
+    console.error(`Error verifying transaction ${reference}:`, error.message);
+    return null;
   }
 };

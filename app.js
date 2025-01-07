@@ -5,6 +5,7 @@ import routes from "./src/modules/v1/routes/index.js";
 import { errorMiddleware } from "./src/middlewares/error.middleware.js";
 import { pageNotFound } from "./src/middlewares/middle.wares.js";
 import connectDb from "./src/utils/db/index.js";
+import { runTransactionVerificationJob } from "./src/utils/cronJobs.js";
 
 dotenv.config();
 
@@ -30,6 +31,8 @@ app.get("/", (req, res) => {
 app.use(routes);
 
 connectDb();
+
+runTransactionVerificationJob();
 
 app.use(pageNotFound);
 app.use(errorMiddleware.handle);

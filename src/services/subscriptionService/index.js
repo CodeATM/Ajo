@@ -2,6 +2,7 @@ import { flwActivateSubscription } from "../../utils/flutterwave.js";
 import { UserExistById } from "../.././services/userService/index.js";
 import User from "../../modules/v1/models/userModel/index.js";
 import Plan from "../../modules/v1/models/planModel/index.js";
+import Transaction from "../../modules/v1/models/transactionModel/index.js";
 import {
   BadRequestError,
   NotFoundError,
@@ -10,10 +11,17 @@ import { SubscribeUserToPlan } from "../../utils/Paystack.js";
 
 const verifyReferralCode = async (refCode) => {
   const planExist = await Plan.findOne({ referalCode: refCode });
-
   if (!planExist) {
     throw new NotFoundError("No plan with this referral code");
   }
+  const currentDate = new Date();
+  const expirationDate = new Date(planExist.expireTime);
+  if (currentDate > expirationDate) {
+    throw new BadRequestError("Referral code has expired");
+  }
+
+  // Optionally, you can return the plan or other details if needed
+  return planExist;
 };
 
 export const subscribUserService = async ({ planId, userId, refCode }) => {
@@ -28,16 +36,31 @@ export const subscribUserService = async ({ planId, userId, refCode }) => {
   }
   const trx_ref = await generateTransactionRefFunc(plan);
 
-  const fluId = plan.flu_planid;
-
   const data = await SubscribeUserToPlan({
     planCode: plan.pay_planid,
     customerId: user.account.customerCode,
     email: user.email,
-    amount: plan.amount
+    amount: plan.amount,
   });
 
-  return data
+  const newTransaction = await Transaction.create({
+    reference: data.reference,
+    trx_ref,
+    status: "pending",
+    amountPaid: plan.amount,
+    currency: "NGN",
+    paymentChannel: "card",
+    customer: {
+      email: user.email,
+      customerCode: user.account.customerCode,
+    },
+    userId: userId,
+    planId: planId,
+    isRecurring: true,
+    paymentInterval: plan.plan_interval,
+  });
+
+  return { data, newTransaction };
 };
 
 const generateTransactionRefFunc = async (plan) => {

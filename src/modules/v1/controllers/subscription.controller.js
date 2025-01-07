@@ -12,7 +12,12 @@ export const subscribeUser = async (req, res, next) => {
       throw new BadRequestError("Plan Id or user Id missing.");
     }
 
-    const data = await subscribUserService({ planId, userId, refCode });
+    const { data, newTransaction } = await subscribUserService({
+      planId,
+      userId,
+      refCode,
+    });
+    console.log(newTransaction);
 
     await successResponse(res, 200, "User subscription initiated", data);
   } catch (error) {
