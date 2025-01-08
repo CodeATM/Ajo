@@ -6,6 +6,7 @@ import { errorMiddleware } from "./src/middlewares/error.middleware.js";
 import { pageNotFound } from "./src/middlewares/middle.wares.js";
 import connectDb from "./src/utils/db/index.js";
 import { runTransactionVerificationJob } from "./src/utils/cronJobs.js";
+import { unsubscribeUserFromAplan } from "./src/services/subscriptionService/index.js";
 
 dotenv.config();
 
@@ -32,7 +33,8 @@ app.use(routes);
 
 connectDb();
 
-runTransactionVerificationJob();
+// runTransactionVerificationJob();
+unsubscribeUserFromAplan()
 
 app.use(pageNotFound);
 app.use(errorMiddleware.handle);

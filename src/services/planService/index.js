@@ -12,7 +12,7 @@ import {
   BadRequestError,
 } from "../../middlewares/error.middleware.js";
 import { createNotification } from "../notificationService/index.js";
-import { paystackCreatePlan } from "../../utils/Paystack.js";
+import { paystackCreatePlan, PayupdatePlan } from "../../utils/Paystack.js";
 
 export const createPlanService = async ({
   duration,
@@ -56,10 +56,12 @@ export const createPlanService = async ({
 
   // Generate a referral code
   const { expireTime, referralCode } = await referalCodeFunc(interval);
+
+  // Adjust expiration date logic based on plan type
   const planExpireDate = await setPlanExpireDate({
     currentExpireDate: null,
     interval: interval,
-    userCount: 0,
+    userCount: planType === "group" ? duration : 0, // Use duration for individual plans, userCount for group plans
   });
 
   // Create the new plan in the database
@@ -96,19 +98,24 @@ export const updatePlan = async ({ name, planId, user, description }) => {
   // Prepare fields to update in the database
   const updateFields = {};
 
+  // Validate the plan and get the current plan details
   const plan = await planValidations({ planId, user });
   if (name) {
-    const flwResponse = await flwUpdatePlan({
+    const updateData = {
       name: name || plan.plan_name,
-      planId: plan.flu_planid,
-    });
+      description: description || plan.description,
+      update_existing_subscriptions: true,
+    };
 
-    if (flwResponse.status !== "success") {
-      throw new BadRequestError("Failed to update plan on Flutterwave");
+    const paystackUpdate = await PayupdatePlan(plan.pay_planid, updateData);
+
+    if ((updateData.status = false)) {
+      throw new BadRequestError("Failed to update plan");
     }
 
-    // Update the database fields for `name` and `activeStatus`
-    if (name) updateFields.plan_name = name;
+    // Update the fields for `name` and `description` in the database
+    updateFields.plan_name = name || plan.plan_name;
+    updateFields.description = description || plan.description;
   }
 
   // Update any additional fields directly in the database (if any provided)
@@ -116,6 +123,9 @@ export const updatePlan = async ({ name, planId, user, description }) => {
   const updatedPlan = await Plan.findByIdAndUpdate(planId, additionalFields, {
     new: true,
   });
+
+  // Optionally update the plan on Paystack
+  await PayupdatePlan(plan.pay_planid, { name, description });
 
   return updatedPlan;
 };
@@ -148,6 +158,18 @@ export const getPlanService = async (planId) => {
     const res = await Plan.find();
     return res;
   }
+};
+
+export const getUserPlansService = async (userId) => {
+  const userPlans = await Plan.find({
+    $or: [{ plan_admin: userId }, { "plan_member.userId": userId }],
+  });
+
+  if (!userPlans || userPlans.length === 0) {
+    throw new NotFoundError("This user has no plan.");
+  }
+
+  return userPlans;
 };
 
 const planValidations = async ({ planId, user }) => {
@@ -219,6 +241,7 @@ const referalCodeFunc = async (interval) => {
 
   return { referralCode, expireTime };
 };
+
 const setPlanExpireDate = async ({
   currentExpireDate,
   interval,
@@ -228,12 +251,13 @@ const setPlanExpireDate = async ({
     ? new Date(currentExpireDate)
     : new Date();
 
+  // For individual plans, use duration (number of payments) to set expiration
   if (userCount === 0) {
     if (interval == "monthly") {
       expireDate = new Date(
         Date.UTC(
           expireDate.getUTCFullYear(),
-          expireDate.getUTCMonth() + 1,
+          expireDate.getUTCMonth(), // Use duration here for individual plan
           expireDate.getUTCDate(),
           0,
           0,
@@ -245,7 +269,7 @@ const setPlanExpireDate = async ({
         Date.UTC(
           expireDate.getUTCFullYear(),
           expireDate.getUTCMonth(),
-          expireDate.getUTCDate() + 7,
+          expireDate.getUTCDate(), // Adjust for weekly interval
           0,
           0,
           0
@@ -255,7 +279,7 @@ const setPlanExpireDate = async ({
       expireDate = new Date(
         Date.UTC(
           expireDate.getUTCFullYear(),
-          expireDate.getUTCMonth() + 6,
+          expireDate.getUTCMonth() + duration * 6, // Adjust for biannual interval
           expireDate.getUTCDate(),
           0,
           0,
@@ -266,11 +290,12 @@ const setPlanExpireDate = async ({
       throw new Error("Invalid interval type provided.");
     }
   } else {
+    // For group plans, use userCount to set expiration based on the number of participants
     if (interval == "monthly") {
       expireDate = new Date(
         Date.UTC(
           expireDate.getUTCFullYear(),
-          expireDate.getUTCMonth() + userCount,
+          expireDate.getUTCMonth() + userCount, // Use userCount for group plans
           expireDate.getUTCDate(),
           0,
           0,
@@ -282,7 +307,7 @@ const setPlanExpireDate = async ({
         Date.UTC(
           expireDate.getUTCFullYear(),
           expireDate.getUTCMonth(),
-          expireDate.getUTCDate() + userCount * 7,
+          expireDate.getUTCDate(), // Adjust for group plan weekly
           0,
           0,
           0
@@ -292,7 +317,7 @@ const setPlanExpireDate = async ({
       expireDate = new Date(
         Date.UTC(
           expireDate.getUTCFullYear(),
-          expireDate.getUTCMonth() + userCount * 6,
+          expireDate.getUTCMonth(), // Adjust for group plan biannual
           expireDate.getUTCDate(),
           0,
           0,

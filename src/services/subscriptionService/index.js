@@ -63,6 +63,10 @@ export const subscribUserService = async ({ planId, userId, refCode }) => {
   return { data, newTransaction };
 };
 
+export const unsubscribeUserFromAplan = async () => {
+  
+}
+
 const generateTransactionRefFunc = async (plan) => {
   const date = Date.now();
   const plan_id = plan.pay_planid;

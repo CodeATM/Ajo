@@ -3,6 +3,7 @@ import {
   cancelPlanService,
   createPlanService,
   getPlanService,
+  getUserPlansService,
   updatePlan,
 } from "../../../services/planService/index.js";
 import { flwActivateSubscription } from "../../../utils/flutterwave.js";
@@ -38,19 +39,16 @@ export const UpdatePlan = async (req, res, next) => {
     const data = await updatePlan({ name, planId, user, description });
 
     await successResponse(res, 200, "Plan updated", data);
-  } catch (error) {
-    console.log(error);
-    next(error);
-  }
+  } catch (error) {}
 };
 
-export const cancelPlan = async (req, res, next) => {
+export const getUserPlan = async (req, res, next) => {
   try {
     const user = req.user;
-    const { planId } = req.params;
-    const data = await cancelPlanService({ planId, user });
 
-    await successResponse(res, 200, "Plan updated", data);
+    const data = await getUserPlansService(user);
+
+    await successResponse(res, "User plans fetched successfully", data);
   } catch (error) {
     console.log(error);
     next(error);
@@ -80,3 +78,16 @@ export const getPlan = async (req, res, next) => {
     next(error);
   }
 };
+
+// export const cancelPlan = async (req, res, next) => {
+//   try {
+//     const user = req.user;
+//     const { planId } = req.params;
+//     const data = await cancelPlanService({ planId, user });
+
+//     await successResponse(res, 200, "Plan updated", data);
+//   } catch (error) {
+//     console.log(error);
+//     next(error);
+//   }
+// };

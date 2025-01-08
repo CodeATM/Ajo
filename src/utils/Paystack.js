@@ -104,3 +104,26 @@ export const verifyTransaction = async (reference) => {
     return null;
   }
 };
+
+export const PayupdatePlan = async (planId, updateData) => {
+  console.log(planId)
+  try {
+    const response = await axios.put(
+      `https://api.paystack.co/plan/${planId}`,
+      updateData,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    console.log("Plan updated successfully:", response.data);
+    // return response.data.data;
+  } catch (error) {
+    console.error(
+      "Error updating plan:",
+      error.response ? error.response.data : error.message
+    );
+  }
+};

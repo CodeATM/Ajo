@@ -3,7 +3,10 @@ import mongoose from "mongoose";
 const transactionSchema = new mongoose.Schema(
   {
     // Fields from Payment Gateway response
-    transactionId: { type: Number, unique: true },
+    transactionId: {
+      type: String,
+      unique: true,
+    },
     reference: { type: String, required: true, unique: true },
     trx_ref: {
       type: String,
