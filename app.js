@@ -34,7 +34,7 @@ app.use(routes);
 connectDb();
 
 // runTransactionVerificationJob();
-unsubscribeUserFromAplan()
+unsubscribeUserFromAplan();
 
 app.use(pageNotFound);
 app.use(errorMiddleware.handle);

@@ -10,6 +10,7 @@ import crypto from "crypto";
 import { createAccount } from "../accountService/index.js";
 import { create, UserExist } from "../userService/index.js";
 import { createNotification } from "../notificationService/index.js";
+import redisClient from "../../utils/redis/index.js";
 
 // register
 export const registerService = async (registerData) => {
@@ -108,7 +109,41 @@ export const loginService = async ({ email, password }) => {
     UserIdentity: { userId },
     expiresIn: process.env.VERIFICATION_REFRESH_TOKEN_EXP,
   });
+
+  const accessTTL = parseInt(process.env.ACCESS_TTL, 10) * 60;
+  const refreshTTL = parseInt(process.env.REFRESH_TTL, 10) * 24 * 3600;
+
+  await redisClient.set(userId, `${accessToken.split(".")[1]}`, accessTTL);
+  await redisClient.set(
+    `${userId}_refresh`,
+    `${refreshToken.split(".")[1]}`,
+    refreshTTL
+  );
   return { accessToken, refreshToken, userId };
+};
+
+export const refreshService = async (refreshToken) => {
+  try {
+    const user = await verifyTokenFunc(refreshToken);
+    const isLoggedIn = await redisClient.get(`${user.userId}_refresh`);
+    if (!isLoggedIn || isLoggedIn !== `${refreshToken.split(".")[1]}`) {
+      throw new ForbiddenError("The token is invalid or has expired.");
+    }
+    const newAccessToken = await createJwtTokenFunc({
+      UserIdentity: { userId: user.userId },
+      expiresIn: process.env.ACCESS_TTL,
+    });
+    await redisClient.set(
+      user.userId,
+      `${newAccessToken.split(".")[1]}`,
+      parseInt(process.env.ACCESS_TTL, 10) * 60 // TTL in seconds
+    );
+
+    return { newAccessToken };
+  } catch (error) {
+    console.error("Error in refreshService:", error.message);
+    throw error;
+  }
 };
 
 export const changePasswordService = async ({
@@ -151,15 +186,32 @@ export const requestOTP = async ({ email }) => {
     throw new NotFoundError("User with this email not found.");
   }
 
-  const optCode = await this.generateOTP();
-  // write a function to send mail to the user
-  // concertnate the userId andf the otp code
-  // save in he redis cache store
+  // const subject = "Password Reset";
+  const otpCode = await OTPFunc();
+  // await sendVerificationEmail(email, subject, 'password-reset.html', optCode, {username: user.profile.username});
+  await redisClient.set(
+    otpCode,
+    `${user.id}_OTP`,
+    parseInt(process.env.OTP_TTL)
+  );
+  console.log(otpCode);
 };
 
-export const resetPassword = async ({ password, otp }) => {
-  // validate otp from redis
+export const resetPasswordService = async ({ password, otp }) => {
+  const isValidOTP = await redisClient.get(otp); // value is user id
 
+  if (!isValidOTP) throw new BadRequestError("Expired Or Worng OTP Code.");
+  const hashedPassword = await hashpasswordFunc(password);
+
+  const data = { password: hashedPassword };
+  const userId = isValidOTP.split("_")[0];
+
+  await User.findByIdAndUpdate(userId, {
+    password: hashedPassword,
+  });
+  await redisClient.del(otp);
+
+  return userId;
 };
 
 const hashpasswordFunc = async (password) => {

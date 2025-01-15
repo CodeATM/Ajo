@@ -1,84 +1,119 @@
-const { createClient } = require("redis");
+import { createClient } from "redis";
 
-const ENV = process.env.NODE_ENV;
+const ENV = "prod";
 
-const createRedisClient = () => {
-  const client = createClient({
-    username: process.env.REDIS_USERNAME,
-    password: process.env.REDIS_PASSWORD,
-    socket: {
-      host: process.env.REDIS_HOST,
-      port: process.env.REDIS_PORT,
-    },
-  });
+// Redis connection credentials
+const REDIS_USERNAME = process.env.REDIS_USERNAME || "default";
+const REDIS_PASSWORD =
+  process.env.REDIS_PASSWORD || "gQ2qxhKoOk9dwnr70Xv1B1zGyykEW3SP";
+const REDIS_HOST =
+  process.env.REDIS_HOST ||
+  "redis-15341.c15.us-east-1-4.ec2.redns.redis-cloud.com";
+const REDIS_PORT = process.env.REDIS_PORT || 15341;
 
-  client.on("connect", () => {
-    console.log("Connected to Redis");
-  });
+class RedisClient {
+  constructor() {
+    this.client = null;
+    this.isConnected = false;
 
-  client.on("error", (err) => {
-    console.error("Redis client error:", err.message);
-  });
+    if (ENV === "prod") {
+      this.client = createClient({
+        url: `redis://${REDIS_USERNAME}:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}`,
+      });
 
-  const connect = async () => {
+      this.client.on("connect", () => {
+        console.log("Connected to Redis");
+        this.isConnected = true;
+      });
+
+      this.client.on("error", (err) => {
+        console.error("Redis client error:", err.message);
+        this.isConnected = false;
+      });
+
+      this.client.on("end", () => {
+        console.log("Redis client disconnected");
+        this.isConnected = false;
+      });
+    } else {
+      console.warn("Redis operations are only enabled in production.");
+    }
+  }
+
+  async connect() {
+    if (!this.client) {
+      console.warn(
+        "Redis is not initialized. This operation is only allowed in production."
+      );
+      return;
+    }
     try {
-      await client.connect();
+      await this.client.connect();
     } catch (err) {
       console.error("Failed to connect to Redis:", err.message);
     }
-  };
+  }
 
-  const isAlive = () => client.isOpen;
+  isAlive() {
+    return this.isConnected;
+  }
 
-  const get = async (key) => {
+  async get(key) {
+    if (ENV !== "prod" || !this.client) {
+      console.warn("Redis operations are only available in production.");
+      return null;
+    }
     try {
-      return await client.get(key);
+      return await this.client.get(key);
     } catch (err) {
       console.error("Error getting value:", err.message);
       return null;
     }
-  };
+  }
 
-  const set = async (key, value, ttl) => {
+  async set(key, value, ttl) {
+    if (ENV !== "prod" || !this.client) {
+      console.warn("Redis operations are only available in production.");
+      return;
+    }
     try {
-      await client.set(key, value, { EX: ttl });
+      await this.client.set(key, value, { EX: ttl });
     } catch (err) {
       console.error("Error setting value:", err.message);
     }
-  };
+  }
 
-  const del = async (key) => {
+  async del(key) {
+    if (ENV !== "prod" || !this.client) {
+      console.warn("Redis operations are only available in production.");
+      return;
+    }
     try {
-      await client.del(key);
+      await this.client.del(key);
     } catch (err) {
       console.error("Error deleting value:", err.message);
     }
-  };
+  }
 
-  const deleteAllKeys = async () => {
+  async deleteAllKeys() {
+    if (ENV !== "prod" || !this.client) {
+      console.warn("Redis operations are only available in production.");
+      return;
+    }
     try {
-      await client.flushDb();
+      await this.client.flushDb();
     } catch (err) {
       console.error("Error deleting keys:", err.message);
     }
-  };
-
-  return {
-    connect,
-    isAlive,
-    get,
-    set,
-    del,
-    deleteAllKeys,
-  };
-};
-
-const redisClient = createRedisClient();
-
-(async () => {
-  if (ENV === "prod") {
-    await redisClient.connect();
   }
-})();
+}
 
-module.exports = redisClient;
+const redisClient = new RedisClient();
+
+if (ENV === "prod") {
+  (async () => {
+    await redisClient.connect();
+  })();
+}
+
+export default redisClient;

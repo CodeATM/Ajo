@@ -3,8 +3,10 @@ import { createAccount } from "../../../services/accountService/index.js";
 import {
   changePasswordService,
   loginService,
+  refreshService,
   registerService,
   requestOTP,
+  resetPasswordService,
   verifyTokenFunc,
   verifyUserService,
 } from "../../../services/AuthService/index.js";
@@ -63,6 +65,22 @@ export const loginUser = async (req, res, next) => {
   }
 };
 
+export const refreshToken = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      throw new BadRequestError("Missing refresh Token");
+    }
+    const newAccessToken = await refreshService(refreshToken);
+    return successResponse(res, 200, "Refrech Access Token Successfully.", {
+      accessToken: newAccessToken,
+    });
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
+
 export const changePassword = async (req, res, next) => {
   try {
     const { userId, newPassword, oldPassword } = req.body;
@@ -98,14 +116,19 @@ export const getOtp = async (req, res, next) => {
 
 export const resetPassword = async (req, res, next) => {
   try {
-    const user = req.user;
-    const { password, otp } = req.body;
+    const newPassword = req.body.new_password;
+    const otp = req.body.otp;
 
-    if (!password) throw new BadRequestError("Password space cannot be empty.");
-    if (!otp) throw new BadRequestError("Otp space cannot be empty.");
+    if (!otp) throw new BadRequestError("OTP Code Cannot Be Empty.");
+    if (!newPassword) throw new BadRequestError("Password Cannot Be Empty.");
 
-    const data = await resetPassword({ password, otp });
-    await successResponse(res, 200, "Password changed successfully.", data);
+    const userId = await resetPasswordService({ newPassword, otp });
+    // await NotificationService.notifyPasswordReset(userId);
+    return apiResponse.successResponse(
+      res,
+      200,
+      "Password reset Successfully."
+    );
   } catch (error) {
     console.log(error);
     next(error);
