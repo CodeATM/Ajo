@@ -5,6 +5,9 @@ import routes from "./src/modules/v1/routes/index.js";
 import { errorMiddleware } from "./src/middlewares/error.middleware.js";
 import { pageNotFound } from "./src/middlewares/middle.wares.js";
 import connectDb from "./src/utils/db/index.js";
+import helmet from "helmet";
+import compression from "compression";
+import morgan from "morgan";
 import { runTransactionVerificationJob } from "./src/utils/cronJobs.js";
 import { unsubscribeUserFromAplan } from "./src/services/subscriptionService/index.js";
 
@@ -26,6 +29,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(morgan("combined"));
+app.use(compression());
+app.use(helmet());
 app.get("/", (req, res) => {
   res.send("<h1>This server is healthy🎉🎊</h1>");
 });

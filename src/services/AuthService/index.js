@@ -198,7 +198,7 @@ export const requestOTP = async ({ email }) => {
 };
 
 export const resetPasswordService = async ({ password, otp }) => {
-  const isValidOTP = await redisClient.get(otp); // value is user id
+  const isValidOTP = await redisClient.get(otp);
 
   if (!isValidOTP) throw new BadRequestError("Expired Or Worng OTP Code.");
   const hashedPassword = await hashpasswordFunc(password);

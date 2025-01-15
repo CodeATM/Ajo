@@ -110,10 +110,10 @@ class RedisClient {
 
 const redisClient = new RedisClient();
 
-if (ENV === "prod") {
-  (async () => {
-    await redisClient.connect();
-  })();
-}
+// if (ENV === "prod") {
+//   (async () => {
+//     await redisClient.connect();
+//   })();
+// }
 
 export default redisClient;

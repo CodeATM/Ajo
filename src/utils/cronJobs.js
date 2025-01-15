@@ -96,7 +96,7 @@ export const unsubscribeUsersFromAnExpiredPlan = () => {
     try {
       // Step 1: Find expired plans
       const expiredPlans = await Plan.find({
-        plan_EndDate: { $lte: new Date() },
+        plan_EndDate: { $lte: new Date()},
         isActive: true,
       });
 
