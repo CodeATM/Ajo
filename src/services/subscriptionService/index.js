@@ -9,20 +9,7 @@ import {
 } from "../../middlewares/error.middleware.js";
 import { SubscribeUserToPlan } from "../../utils/Paystack.js";
 
-const verifyReferralCode = async (refCode) => {
-  const planExist = await Plan.findOne({ referalCode: refCode });
-  if (!planExist) {
-    throw new NotFoundError("No plan with this referral code");
-  }
-  const currentDate = new Date();
-  const expirationDate = new Date(planExist.expireTime);
-  if (currentDate > expirationDate) {
-    throw new BadRequestError("Referral code has expired");
-  }
 
-  // Optionally, you can return the plan or other details if needed
-  return planExist;
-};
 
 export const subscribUserService = async ({ planId, userId, refCode }) => {
   await verifyReferralCode(refCode);
@@ -67,6 +54,7 @@ export const unsubscribeUserFromAplan = async () => {
   
 }
 
+// internal function =================================
 const generateTransactionRefFunc = async (plan) => {
   const date = Date.now();
   const plan_id = plan.pay_planid;
@@ -76,4 +64,19 @@ const generateTransactionRefFunc = async (plan) => {
   const ref = `TXN-${date}${plan_id}${randomSuffix}`;
   console.log(ref);
   return ref;
+};
+
+const verifyReferralCode = async (refCode) => {
+  const planExist = await Plan.findOne({ referalCode: refCode });
+  if (!planExist) {
+    throw new NotFoundError("No plan with this referral code");
+  }
+  const currentDate = new Date();
+  const expirationDate = new Date(planExist.expireTime);
+  if (currentDate > expirationDate) {
+    throw new BadRequestError("Referral code has expired");
+  }
+
+  // Optionally, you can return the plan or other details if needed
+  return planExist;
 };

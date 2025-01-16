@@ -95,37 +95,34 @@ export const createPlanService = async ({
 };
 
 export const updatePlan = async ({ name, planId, user, description }) => {
-  // Prepare fields to update in the database
-  const updateFields = {};
-
-  // Validate the plan and get the current plan details
+  if (!name && !description) {
+    throw new BadRequestError(
+      "At least one field (name or description) must be provided to update"
+    );
+  }
   const plan = await planValidations({ planId, user });
-  if (name) {
-    const updateData = {
-      name: name || plan.plan_name,
-      description: description || plan.description,
-      update_existing_subscriptions: true,
-    };
 
-    const paystackUpdate = await PayupdatePlan(plan.pay_planid, updateData);
+  const updateData = {};
+  if (name) updateData.name = name;
+  if (description) updateData.description = description;
 
-    if ((updateData.status = false)) {
-      throw new BadRequestError("Failed to update plan");
-    }
+  const externalUpdate = await PayupdatePlan(plan.pay_planid, updateData);
 
-    // Update the fields for `name` and `description` in the database
-    updateFields.plan_name = name || plan.plan_name;
-    updateFields.description = description || plan.description;
+  if (externalUpdate.status !== true) {
+    throw new BadRequestError("Failed to update plan on Paystack");
   }
 
-  // Update any additional fields directly in the database (if any provided)
-  const additionalFields = { ...updateFields, description };
-  const updatedPlan = await Plan.findByIdAndUpdate(planId, additionalFields, {
+  const updateFields = {};
+  if (name) updateFields.plan_name = name;
+  if (description) updateFields.description = description;
+
+  const updatedPlan = await Plan.findByIdAndUpdate(planId, updateFields, {
     new: true,
   });
 
-  // Optionally update the plan on Paystack
-  await PayupdatePlan(plan.pay_planid, { name, description });
+  if (!updatedPlan) {
+    throw new BadRequestError("Failed to update plan in local database");
+  }
 
   return updatedPlan;
 };
@@ -172,6 +169,7 @@ export const getUserPlansService = async (userId) => {
   return userPlans;
 };
 
+// internal functions used in this file ==============================
 const planValidations = async ({ planId, user }) => {
   const plan = await Plan.findById(planId);
   if (!plan) {
@@ -242,11 +240,7 @@ const referalCodeFunc = async (interval) => {
   return { referralCode, expireTime };
 };
 
-const setPlanExpireDate = async ({
-  currentExpireDate,
-  interval,
-  duration, 
-}) => {
+const setPlanExpireDate = async ({ currentExpireDate, interval, duration }) => {
   let expireDate = (await currentExpireDate)
     ? new Date(currentExpireDate)
     : new Date();
@@ -281,7 +275,7 @@ const setPlanExpireDate = async ({
   } else {
     throw new Error("Invalid interval type provided.");
   }
-  console.log(expireDate)
+  console.log(expireDate);
 
   return expireDate;
 };

@@ -39,7 +39,7 @@ app.use(routes);
 
 connectDb();
 
-// runTransactionVerificationJob();
+runTransactionVerificationJob();
 unsubscribeUserFromAplan();
 
 app.use(pageNotFound);

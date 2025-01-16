@@ -1,4 +1,5 @@
 import axios from "axios";
+import { BadRequestError } from "../middlewares/error.middleware.js";
 
 export const paystackCreatePlan = async ({
   name,
@@ -52,7 +53,6 @@ export const createCustomer = async (customerData) => {
 
 export const SubscribeUserToPlan = async ({
   email,
-  customerId,
   planCode,
   amount,
 }) => {
@@ -60,8 +60,8 @@ export const SubscribeUserToPlan = async ({
     const paymentData = {
       email: email,
       plan: planCode,
-      amount: amount * 100, // Ensure amount is in kobo (100 kobo = 1 naira)
-      payment_method: "card", // You can adjust this if you're allowing other payment methods
+      amount: amount * 100, 
+      payment_method: "card",
     };
 
     const response = await axios.post(
@@ -74,9 +74,6 @@ export const SubscribeUserToPlan = async ({
         },
       }
     );
-
-    // // Log and return the response data (payment details)
-    // console.log("Payment Initialization Response:", response.data);
     return response.data.data;
   } catch (error) {
     console.error(
@@ -106,11 +103,10 @@ export const verifyTransaction = async (reference) => {
 };
 
 export const PayupdatePlan = async (planId, updateData) => {
-  console.log(planId)
   try {
     const response = await axios.put(
       `https://api.paystack.co/plan/${planId}`,
-      updateData,
+      { ...updateData, update_existing_subscriptions: true },
       {
         headers: {
           Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`,
@@ -119,11 +115,12 @@ export const PayupdatePlan = async (planId, updateData) => {
       }
     );
     console.log("Plan updated successfully:", response.data);
-    // return response.data.data;
+    return response.data;
   } catch (error) {
     console.error(
       "Error updating plan:",
       error.response ? error.response.data : error.message
     );
+    throw new BadRequestError("Failed to update plan");
   }
 };

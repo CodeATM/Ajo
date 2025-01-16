@@ -39,7 +39,10 @@ export const UpdatePlan = async (req, res, next) => {
     const data = await updatePlan({ name, planId, user, description });
 
     await successResponse(res, 200, "Plan updated", data);
-  } catch (error) {}
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
 };
 
 export const getUserPlan = async (req, res, next) => {
