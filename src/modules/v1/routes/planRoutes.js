@@ -1,6 +1,5 @@
 import { Router } from "express";
 import {
-  // cancelPlan,
   createAplan,
   getAllPlans,
   getPlan,

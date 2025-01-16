@@ -61,7 +61,7 @@ export const createPlanService = async ({
   const planExpireDate = await setPlanExpireDate({
     currentExpireDate: null,
     interval: interval,
-    userCount: planType === "group" ? duration : 0, // Use duration for individual plans, userCount for group plans
+    duration: duration,
   });
 
   // Create the new plan in the database
@@ -245,89 +245,43 @@ const referalCodeFunc = async (interval) => {
 const setPlanExpireDate = async ({
   currentExpireDate,
   interval,
-  userCount,
+  duration, 
 }) => {
   let expireDate = (await currentExpireDate)
     ? new Date(currentExpireDate)
     : new Date();
 
-  // For individual plans, use duration (number of payments) to set expiration
-  if (userCount === 0) {
-    if (interval == "monthly") {
-      expireDate = new Date(
-        Date.UTC(
-          expireDate.getUTCFullYear(),
-          expireDate.getUTCMonth(), // Use duration here for individual plan
-          expireDate.getUTCDate(),
-          0,
-          0,
-          0
-        )
-      );
-    } else if (interval == "weekly") {
-      expireDate = new Date(
-        Date.UTC(
-          expireDate.getUTCFullYear(),
-          expireDate.getUTCMonth(),
-          expireDate.getUTCDate(), // Adjust for weekly interval
-          0,
-          0,
-          0
-        )
-      );
-    } else if (interval == "biannual") {
-      expireDate = new Date(
-        Date.UTC(
-          expireDate.getUTCFullYear(),
-          expireDate.getUTCMonth() + duration * 6, // Adjust for biannual interval
-          expireDate.getUTCDate(),
-          0,
-          0,
-          0
-        )
-      );
-    } else {
-      throw new Error("Invalid interval type provided.");
-    }
+  // Use duration to calculate expiration
+  if (interval === "monthly") {
+    expireDate = new Date(
+      Date.UTC(
+        expireDate.getUTCFullYear(),
+        expireDate.getUTCMonth() + duration, // Multiply by duration for months
+        expireDate.getUTCDate(),
+        0,
+        0,
+        0
+      )
+    );
+  } else if (interval === "weekly") {
+    expireDate = new Date(
+      expireDate.getTime() + duration * 7 * 24 * 60 * 60 * 1000 // Multiply by duration for weeks
+    );
+  } else if (interval === "biannual") {
+    expireDate = new Date(
+      Date.UTC(
+        expireDate.getUTCFullYear(),
+        expireDate.getUTCMonth() + duration * 6, // Multiply by duration for biannual
+        expireDate.getUTCDate(),
+        0,
+        0,
+        0
+      )
+    );
   } else {
-    // For group plans, use userCount to set expiration based on the number of participants
-    if (interval == "monthly") {
-      expireDate = new Date(
-        Date.UTC(
-          expireDate.getUTCFullYear(),
-          expireDate.getUTCMonth() + userCount, // Use userCount for group plans
-          expireDate.getUTCDate(),
-          0,
-          0,
-          0
-        )
-      );
-    } else if (interval == "weekly") {
-      expireDate = new Date(
-        Date.UTC(
-          expireDate.getUTCFullYear(),
-          expireDate.getUTCMonth(),
-          expireDate.getUTCDate(), // Adjust for group plan weekly
-          0,
-          0,
-          0
-        )
-      );
-    } else if (interval == "biannual") {
-      expireDate = new Date(
-        Date.UTC(
-          expireDate.getUTCFullYear(),
-          expireDate.getUTCMonth(), // Adjust for group plan biannual
-          expireDate.getUTCDate(),
-          0,
-          0,
-          0
-        )
-      );
-    } else {
-      throw new Error("Invalid interval type provided.");
-    }
+    throw new Error("Invalid interval type provided.");
   }
+  console.log(expireDate)
 
   return expireDate;
 };
